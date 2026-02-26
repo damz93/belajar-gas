@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Landing Pengajuan</title>
+</head>
+<body>
+
+<h2>FORM PENGAJUAN</h2>
+
+<input type="text" id="nama" placeholder="Nama"><br><br>
+<input type="number" id="nip" placeholder="NIP"><br><br>
+
+<select id="kategori">
+<option value="KGB">KGB</option>
+<option value="KP">KP</option>
+<option value="CUTI">CUTI</option>
+<option value="SAKIT">SAKIT</option>
+</select><br><br>
+
+<input type="file" id="file"><br><br>
+
+<button onclick="submitData()">KIRIM</button>
+
+<p id="msg"></p>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby01pEq5kscfGqhFm8JYDFYqUWl-g1dMo2FOS5lfQqTemyJr1vNANGKK4PuIFIP065o/exec";
+
+async function submitData(){
+const file = document.getElementById("file").files[0];
+const reader = new FileReader();
+
+reader.onload = async function(){
+const base64 = reader.result;
+
+await fetch(WEB_APP_URL,{
+method:"POST",
+body: JSON.stringify({
+action:"submit",
+nama:document.getElementById("nama").value,
+nip:document.getElementById("nip").value,
+kategori:document.getElementById("kategori").value,
+fileName:file.name,
+fileData:base64
+})
+});
+
+document.getElementById("msg").innerText="BERHASIL DIKIRIM";
+}
+
+reader.readAsDataURL(file);
+}
+</script>
+
+<br><br>
+<a href="admin-login.html">Login Admin</a>
+
+</body>
+</html>
+

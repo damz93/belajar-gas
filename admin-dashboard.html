@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard Admin</title>
+</head>
+<body>
+
+<h2>DASHBOARD ADMIN</h2>
+
+<button onclick="logout()">Logout</button>
+<br><br>
+
+<table border="1" id="tableData"></table>
+
+<script>
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby01pEq5kscfGqhFm8JYDFYqUWl-g1dMo2FOS5lfQqTemyJr1vNANGKK4PuIFIP065o/exec";
+
+if(sessionStorage.getItem("admin")!=="true"){
+location.href="admin-login.html";
+}
+
+async function loadData(){
+const res = await fetch(WEB_APP_URL+"?action=getSubmissions");
+const data = await res.json();
+
+let table = document.getElementById("tableData");
+
+data.forEach((row,i)=>{
+let tr="<tr>";
+row.forEach(cell=>{
+tr+="<td>"+cell+"</td>";
+});
+tr+="</tr>";
+table.innerHTML+=tr;
+});
+}
+
+function logout(){
+sessionStorage.removeItem("admin");
+location.href="admin-login.html";
+}
+
+loadData();
+</script>
+
+</body>
+</html>

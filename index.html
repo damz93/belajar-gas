@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>E-Kepegawaian | Monitoring KP & KGB - ded</title>
+  <title>E-Kepegawaian | Monitoring KP & KGB 1</title>
   <link rel="icon" type="image/png" href="https://example.com/logo-ekp.png"> <!-- Ganti logo -->
   <link rel="shortcut icon" type="image/png" href="https://example.com/logo-ekp.png">
   <link rel="apple-touch-icon" href="https://example.com/logo-ekp.png">
@@ -110,82 +110,95 @@
 
   <script>
     const GAS_URL = 'https://script.google.com/macros/s/AKfycbwBHjtQbbQwcZVqxTg4KSVHRqfuYgddfwd35ADP575xyMN3QAXhHXLp7epSvgviMKLm/exec';
-    let currentNip = "";
+let currentNip = "";
 
-    async function cekNIP() {
-      const nip = document.getElementById('nipInput').value.trim();
-      if (!nip) return Swal.fire('Error', 'NIP tidak boleh kosong', 'error');
-
-      Swal.fire({ title: 'Memverifikasi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-      try {
-        const res = await fetch(`${GAS_URL}?func=checkNIP&nip=${encodeURIComponent(nip)}`, {
-          method: 'GET',
-          redirect: 'follow'
-        });
-        const data = await res.json();
-        Swal.close();
-
-        if (data.status === "success") {
-          currentNip = nip;
-          document.getElementById('landingSection').classList.add('hidden');
-          document.getElementById('uploadSection').classList.remove('hidden');
-          document.getElementById('pegawaiInfo').innerHTML = `
-            <strong>${data.data.Nama || 'N/A'}</strong><br>
-            Tipe: ${data.data.Tipe_Pengajuan || '-'}<br>
-            Jatuh Tempo: <b>${data.data.Tgl_Periode ? new Date(data.data.Tgl_Periode).toLocaleDateString('id-ID') : '-'}</b>
-          `;
-        } else {
-          Swal.fire('Maaf', data.message || 'NIP tidak terdaftar', 'warning');
-        }
-      } catch (err) {
-        Swal.close();
-        Swal.fire('Error', 'Gagal koneksi: ' + err.message, 'error');
+// Helper fetch wrapper
+async function gasFetch(url, options = {}) {
+  try {
+    const res = await fetch(url, {
+      ...options,
+      redirect: 'follow',
+      mode: 'cors',  // default, but explicit
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8',
+        ...options.headers
       }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('GAS fetch error:', err);
+    throw err;
+  }
+}
+
+async function cekNIP() {
+  const nip = document.getElementById('nipInput').value.trim();
+  if (!nip) return Swal.fire('Error', 'NIP tidak boleh kosong', 'error');
+
+  Swal.fire({ title: 'Memverifikasi...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+  try {
+    const data = await gasFetch(`${GAS_URL}?func=checkNIP&nip=${encodeURIComponent(nip)}`);
+    Swal.close();
+
+    if (data.status === "success") {
+      currentNip = nip;
+      document.getElementById('landingSection').classList.add('hidden');
+      document.getElementById('uploadSection').classList.remove('hidden');
+      document.getElementById('pegawaiInfo').innerHTML = `
+        <strong>${data.data.Nama || 'N/A'}</strong><br>
+        Tipe: ${data.data.Tipe_Pengajuan || '-'}<br>
+        Jatuh Tempo: <b>${data.data.Tgl_Periode ? new Date(data.data.Tgl_Periode).toLocaleDateString('id-ID') : '-'}</b>
+      `;
+    } else {
+      Swal.fire('Maaf', data.message || 'NIP tidak terdaftar', 'warning');
     }
+  } catch (err) {
+    Swal.close();
+    Swal.fire('Error', 'Gagal koneksi server. Coba lagi nanti.', 'error');
+  }
+}
 
-    async function unggahBerkas() {
-      const fileInput = document.getElementById('filePdf');
-      if (!fileInput.files[0]) return Swal.fire('Error', 'Pilih file PDF dahulu', 'error');
+async function unggahBerkas() {
+  const fileInput = document.getElementById('filePdf');
+  if (!fileInput.files[0]) return Swal.fire('Error', 'Pilih file PDF dahulu', 'error');
 
-      const file = fileInput.files[0];
-      const reader = new FileReader();
+  const file = fileInput.files[0];
+  const reader = new FileReader();
 
-      Swal.fire({ title: 'Mengunggah...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  Swal.fire({ title: 'Mengunggah...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
-      reader.onload = async e => {
-        const payload = {
-          func: 'processUpload',
-          payload: {
-            base64: e.target.result.split(',')[1],
-            type: file.type,
-            name: file.name,
-            nip: currentNip
-          }
-        };
+  reader.onload = async e => {
+    const payload = {
+      func: 'processUpload',
+      payload: {
+        base64: e.target.result.split(',')[1],
+        type: file.type,
+        name: file.name,
+        nip: currentNip
+      }
+    };
 
-        try {
-          const res = await fetch(GAS_URL, {
-            method: 'POST',
-            redirect: 'follow',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
-          });
-          const result = await res.json();
-          Swal.close();
+    try {
+      const result = await gasFetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      Swal.close();
 
-          if (result === "Sukses") {
-            Swal.fire('Sukses', 'Berkas berhasil dikirim! Terima kasih.', 'success').then(() => location.reload());
-          } else {
-            Swal.fire('Gagal', result || 'Upload gagal', 'error');
-          }
-        } catch (err) {
-          Swal.close();
-          Swal.fire('Error', 'Gagal upload: ' + err.message, 'error');
-        }
-      };
-      reader.readAsDataURL(file);
+      if (result === "Sukses") {
+        Swal.fire('Sukses', 'Berkas berhasil dikirim!', 'success').then(() => location.reload());
+      } else {
+        Swal.fire('Gagal', result || 'Upload gagal', 'error');
+      }
+    } catch (err) {
+      Swal.close();
+      Swal.fire('Error', 'Gagal upload: ' + (err.message || 'Unknown error'), 'error');
     }
+  };
+  reader.readAsDataURL(file);
+}
 
     async function loginAdmin() {
       const { value: formValues } = await Swal.fire({
